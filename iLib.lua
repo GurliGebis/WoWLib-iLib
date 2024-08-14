@@ -346,7 +346,7 @@ iLib.frame = iLib.frame or init_frame();
 -- It loads the version from the TOC. If its a number, it gets returned
 -- Supported formats: %x, %x.%x, %x.%x.%x, %x.%x-word%x
 local function smart_version_number(addon)
-	local version = _G.GetAddOnMetadata(addon, "Version") or 1;
+	local version = C_AddOns.GetAddOnMetadata(addon, "Version") or 1;
 	if( tonumber(version) ) then
 		return version;
 	end

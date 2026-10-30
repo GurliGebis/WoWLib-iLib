@@ -1,4 +1,4 @@
-local MAJOR_VERSION, MINOR_VERSION = "iLib", 600100
+local MAJOR_VERSION, MINOR_VERSION = "iLib", 600101
 if( not LibStub ) then error(MAJOR_VERSION.." requires LibStub"); end
 
 local iLib, oldLib = LibStub:NewLibrary(MAJOR_VERSION, MINOR_VERSION);
@@ -7,6 +7,11 @@ if( not iLib ) then return; end
 local AceComm = LibStub("AceComm-3.0");
 
 local _G = _G;
+
+-- secret values (Midnight+) cannot be used as table keys or compared; older clients have no such API
+local issecretvalue = _G.issecretvalue or function()
+	return false;
+end;
 
 -------------------
 -- Variables
@@ -135,6 +140,9 @@ do
 	end
 	
 	send_msg_touch = function(chat, user)
+		if( issecretvalue(user) ) then
+			return;
+		end
 		if( iLib.touch[user] ) then
 			return;
 		end
@@ -143,6 +151,9 @@ do
 	end
 	
 	send_msg_touch_resp = function(chat, user)
+		if( issecretvalue(user) ) then
+			return;
+		end
 		iLib.touch[user] = true;
 		AceComm.SendCommMessage(iLib, "iLib", _encode("y"), chat, (chat == "WHISPER" and user or nil), "BULK");
 	end
@@ -203,6 +214,9 @@ do
 	end
 	
 	function iLib:CommReceived(prefix, msg, chat, user)
+		if( issecretvalue(msg) or issecretvalue(chat) or issecretvalue(user) ) then
+			return;
+		end
 		msg = _decode(msg) or "";
 		--@do-not-package@
 		--print(user.." ("..chat..") - "..msg);
@@ -279,13 +293,20 @@ local function iLib_OnEvent(self, event, ...)
 	-- check whispers
 	--if( event == "CHAT_MSG_WHISPER" or event == "CHAT_MSG_WHISPER_INFORM" ) then
 	if( event == "CHAT_MSG_WHISPER_INFORM" ) then
-		send_msg_touch("WHISPER", select(2, ...));
+		local user = select(2, ...);
+		if( not issecretvalue(user) ) then
+			send_msg_touch("WHISPER", user);
+		end
 		return;
 	end
 	
 	-- check whisper addon messages
 	if( event == "CHAT_MSG_ADDON" ) then
 		local prefix, msg, chat, user = ...;
+		
+		if( issecretvalue(prefix) or issecretvalue(chat) or issecretvalue(user) ) then
+			return;
+		end
 		
 		if( prefix ~= "iLib" and chat == "WHISPER" and user ~= player ) then
 			send_msg_touch("WHISPER", user);
@@ -298,6 +319,9 @@ local function iLib_OnEvent(self, event, ...)
 	-- check mouseover units
 	if( event == "UPDATE_MOUSEOVER_UNIT" ) then
 		local user, unit = _G.GameTooltip:GetUnit();
+		if( issecretvalue(user) or issecretvalue(unit) ) then
+			return;
+		end
 		
 		if( unit and user ~= _G.UNKNOWN and user ~= player and _G.UnitIsPlayer(unit) and _G.UnitCanCooperate("player", unit) ) then
 			local name, server = _G.UnitName(unit);
